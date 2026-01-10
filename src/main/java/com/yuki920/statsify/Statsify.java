@@ -86,7 +86,7 @@ public class Statsify {
     }
 
     @SubscribeEvent
-    public void onChat(ClientChatReceivedEvent event) {
+    public void onChat(final ClientChatReceivedEvent event) {
         catchAndIgnoreNullPointerException(new Runnable() {
             @Override
             public void run() {
