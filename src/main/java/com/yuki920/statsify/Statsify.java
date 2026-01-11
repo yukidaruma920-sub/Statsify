@@ -1485,9 +1485,6 @@ Prename check end
             return 0;
         }
     }
-    private String fetchPlayerStatss(String playerName) throws IOException {
-        return fetchBedwarsStats(playerName);
-    }
 
 // Command to manually check individual stats
     public class BedwarsCommand extends CommandBase {
@@ -1496,25 +1493,26 @@ Prename check end
         public String getCommandName() {
             return "bw";
         }
-
+    
         @Override
         public String getCommandUsage(ICommandSender sender) {
             return "/bw <username>";
         }
-
+    
         @Override
         public void processCommand(ICommandSender sender, String[] args) {
             if (args.length != 1) {
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r]\u00a7cInvalid usage!\u00a7r Use /bw \u00a75<username>\u00a7r"));
                 return;
             }
-
+    
             final String username = args[0];
             new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        final String stats = fetchPlayerStatss(username);
+                        // fetchPlayerStatss の代わりに fetchBedwarsStats を使用
+                        final String stats = fetchBedwarsStats(username);
                         Minecraft.getMinecraft().addScheduledTask(new Runnable() {
                             @Override
                             public void run() {
@@ -1531,8 +1529,8 @@ Prename check end
                     }
                 }
             }).start();
-
         }
+        
         @Override
         public List<String> addTabCompletionOptions(ICommandSender sender, String[] args, BlockPos pos) {
             if (args.length == 1) {
@@ -1545,13 +1543,11 @@ Prename check end
             }
             return null;
         }
+        
         @Override
         public int getRequiredPermissionLevel() {
             return 0;
         }
-
-
-
     }
     /* ========================================================= */
     public class StatsifyCommand extends CommandBase {
