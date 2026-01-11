@@ -1486,37 +1486,7 @@ Prename check end
         }
     }
     private String fetchPlayerStatss(String playerName) throws IOException {
-        String uuid = fetchUUID(playerName);
-        String stjson = nadeshikoAPI(uuid);
-        if (stjson == null || stjson.isEmpty()) {
-            return playerName + " \u00a7c is possibly nicked.";
-        }
-
-        JsonObject rootObject = new JsonParser().parse(stjson).getAsJsonObject();
-
-        JsonObject profile = rootObject.getAsJsonObject("profile");
-        String displayedName = profile.has("tagged_name") ? profile.get("tagged_name").getAsString() : "[]";
-        JsonObject ach = rootObject.getAsJsonObject("achievements");
-        String level = ach.has("bedwars_level") ? ach.get("bedwars_level").getAsString() : "0";
-        level = formatStars(level);
-
-        JsonObject bedwarsStats = rootObject.getAsJsonObject("stats").getAsJsonObject("Bedwars");
-        int finalKills = bedwarsStats.has("final_kills_bedwars") ? bedwarsStats.get("final_kills_bedwars").getAsInt() : 0;
-        int finalDeaths = bedwarsStats.has("final_deaths_bedwars") ? bedwarsStats.get("final_deaths_bedwars").getAsInt() : 0;
-        double fkdr = (finalDeaths == 0) ? finalKills : (double) finalKills / finalDeaths;
-        String fkdrColor = "\u00a77";
-        if (fkdr >= 0.5 && fkdr < 1) fkdrColor = "\u00a7f";
-        if (fkdr >= 1 && fkdr < 2) fkdrColor = "\u00a7a";
-        if (fkdr >= 2 && fkdr < 3) fkdrColor = "\u00a72";
-        if (fkdr >= 3 && fkdr < 4) fkdrColor = "\u00a7e";
-        if (fkdr >= 4 && fkdr < 6) fkdrColor = "\u00a76";
-        if (fkdr >= 6 && fkdr < 8) fkdrColor = "\u00a7c";
-        if (fkdr >= 8 && fkdr < 10) fkdrColor = "\u00a74";
-        if (fkdr >= 10 && fkdr < 15) fkdrColor = "\u00a7d";
-        if (fkdr > 15) fkdrColor = "\u00a75";
-        DecimalFormat df = new DecimalFormat("#.##");
-        String formattedFkdr = df.format(fkdr);
-        return displayedName + " \u00a7r" + level +" \u00a7rFKDR: " + fkdrColor + formattedFkdr;
+        return fetchBedwarsStats(playerName);
     }
 
 // Command to manually check individual stats
