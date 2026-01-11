@@ -1486,6 +1486,70 @@ Prename check end
         }
     }
 
+    private String fetchPlayerStatsForCommand(String playerName) throws IOException {
+        try {
+            // APIを使ってUUIDを取得（タブリスト外のプレイヤーにも対応）
+            String uuid = fetchUUID(playerName);
+            
+            if (uuid == null || uuid.equals("NICKED")) {
+                return playerName + " \u00a7c is possibly nicked.";
+            }
+            
+            // Hypixel APIを使用
+            String jsonResponse = fetchHypixelBedwarsStats(uuid);
+            JsonObject root = new JsonParser().parse(jsonResponse).getAsJsonObject();
+            
+            // プレイヤーが存在しない場合
+            if (!root.get("success").getAsBoolean() || root.get("player").isJsonNull()) {
+                return playerName + " \u00a7cis possibly nicked.";
+            }
+            
+            JsonObject player = root.getAsJsonObject("player");
+            
+            // 表示名取得
+            String displayedName = player.has("displayname") ? player.get("displayname").getAsString() : playerName;
+            
+            // Bedwars統計取得
+            if (!player.has("stats") || !player.getAsJsonObject("stats").has("Bedwars")) {
+                return displayedName + " \u00a7chas no Bedwars stats.";
+            }
+            
+            JsonObject bedwars = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
+            
+            // 星レベル計算
+            int experience = bedwars.has("Experience") ? bedwars.get("Experience").getAsInt() : 0;
+            int level = getBedwarsLevelFromExp(experience);
+            String formattedStars = formatStars(String.valueOf(level));
+            
+            // FKDR計算
+            int finalKills = bedwars.has("final_kills_bedwars") ? bedwars.get("final_kills_bedwars").getAsInt() : 0;
+            int finalDeaths = bedwars.has("final_deaths_bedwars") ? bedwars.get("final_deaths_bedwars").getAsInt() : 1;
+            double fkdr = (double) finalKills / finalDeaths;
+            
+            // FKDR色付け
+            String fkdrColor = "\u00a77";
+            if (fkdr >= 0.5 && fkdr < 1) fkdrColor = "\u00a7f";
+            if (fkdr >= 1 && fkdr < 2) fkdrColor = "\u00a7a";
+            if (fkdr >= 2 && fkdr < 3) fkdrColor = "\u00a72";
+            if (fkdr >= 3 && fkdr < 4) fkdrColor = "\u00a7e";
+            if (fkdr >= 4 && fkdr < 6) fkdrColor = "\u00a76";
+            if (fkdr >= 6 && fkdr < 8) fkdrColor = "\u00a7c";
+            if (fkdr >= 8 && fkdr < 10) fkdrColor = "\u00a74";
+            if (fkdr >= 10 && fkdr < 15) fkdrColor = "\u00a7d";
+            if (fkdr > 15) fkdrColor = "\u00a75";
+            
+            DecimalFormat df = new DecimalFormat("#.##");
+            String formattedFkdr = df.format(fkdr);
+            
+            // シンプルな出力形式（元の仕様）
+            return displayedName + " \u00a7r" + formattedStars + " \u00a7rFKDR: " + fkdrColor + formattedFkdr;
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return playerName + " \u00a7cError fetching stats.";
+        }
+    }
+
 // Command to manually check individual stats
     public class BedwarsCommand extends CommandBase {
 
@@ -1511,8 +1575,8 @@ Prename check end
                 @Override
                 public void run() {
                     try {
-                        // fetchPlayerStatss の代わりに fetchBedwarsStats を使用
-                        final String stats = fetchBedwarsStats(username);
+                        // 専用メソッドを使用（Tabリスト上書きなし）
+                        final String stats = fetchPlayerStatsForCommand(username);
                         Minecraft.getMinecraft().addScheduledTask(new Runnable() {
                             @Override
                             public void run() {
