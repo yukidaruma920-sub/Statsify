@@ -573,82 +573,10 @@ public class Statsify {
             // Hypixel APIを使用
             String jsonResponse = fetchHypixelBedwarsStats(uuid);
             return parseHypixelStats(jsonResponse, playerName, uuid);
-
-            // String stjson = nadeshikoAPI(uuid);
-            // if (stjson == null || stjson.isEmpty()) {
-            //     return getTabDisplayName(playerName) + " \u00a7cis possibly nicked.";
-            // }
-
-            // JsonObject rootObject = new JsonParser().parse(stjson).getAsJsonObject();
-            // JsonObject profile = rootObject.getAsJsonObject("profile");
-            // String displayedName = profile.has("tagged_name") ? profile.get("tagged_name").getAsString() : playerName;
-            // JsonObject ach = rootObject.getAsJsonObject("achievements");
-            // String levelStr = ach.has("bedwars_level") ? ach.get("bedwars_level").getAsString() : "0";
-            // String formattedStars = formatStars(levelStr);
-
-            // JsonObject bedwarsStats = rootObject.getAsJsonObject("stats").getAsJsonObject("Bedwars");
-
-            // String finalKillsStr = bedwarsStats.has("final_kills_bedwars") ? bedwarsStats.get("final_kills_bedwars").getAsString() : "0";
-            // String finalDeathsStr = bedwarsStats.has("final_deaths_bedwars") ? bedwarsStats.get("final_deaths_bedwars").getAsString() : "0";
-            // int wins = bedwarsStats.has("wins_bedwars") ? bedwarsStats.get("wins_bedwars").getAsInt() : 0;
-            // int losses = bedwarsStats.has("losses_bedwars") ? bedwarsStats.get("losses_bedwars").getAsInt() : 0;
-            // double wlr = losses == 0 ? wins : (double) wins / losses;
-            // DecimalFormat dfm = new DecimalFormat("#.##");
-            // String wlrStr = dfm.format(wlr);
-            // String wsStr = bedwarsStats.has("winstreak") ? bedwarsStats.get("winstreak").getAsString() : "0";
-
-            // int finalKills = Integer.parseInt(finalKillsStr.replace(",", ""));
-            // int finalDeaths = Integer.parseInt(finalDeathsStr.replace(",", ""));
-            // double fkdrValue = finalDeaths == 0 ? finalKills : (double) finalKills / finalDeaths;
-
-            // if (fkdrValue < minFkdr) {
-            //     return "";
-            // }
-
-            // String fkdrColor = "\u00a77";
-            // if (fkdrValue >= 1 && fkdrValue < 3) fkdrColor = "\u00a7f";
-            // if (fkdrValue >= 3 && fkdrValue < 8) fkdrColor = "\u00a7a";
-            // if (fkdrValue >= 8 && fkdrValue < 16) fkdrColor = "\u00a76";
-            // if (fkdrValue >= 16 && fkdrValue < 25) fkdrColor = "\u00a7d";
-            // if (fkdrValue > 25) fkdrColor = "\u00a74";
-
-            // DecimalFormat df = new DecimalFormat("#.##");
-            // String formattedFkdr = df.format(fkdrValue);
-            // String formattedWinstreak = "";
-            // int winstreak = Integer.parseInt(wsStr.replace(",", "").trim());
-            // if (winstreak > 0) {
-            //     formattedWinstreak = formatWinstreak(wsStr);
-            // }
-
-            // String tabfkdr = fkdrColor + formattedFkdr;
-            // if (tabstats) {
-            //     sendToTablist(playerName, tabfkdr, formattedStars);
-            // }
-
-            // if (tags) {
-            //     String tagsValue = buildTags(playerName, playerName, Integer.parseInt(levelStr), fkdrValue, winstreak, finalKills, finalDeaths);
-            //     if (tagsValue.endsWith(" ")) {
-            //         tagsValue = tagsValue.substring(0, tagsValue.length() - 1);
-            //     }
-            //     if (formattedWinstreak.isEmpty()) {
-            //         return getTabDisplayName(playerName) + " \u00a7r" + formattedStars + "\u00a7r\u00a77 |\u00a7r FKDR: " + fkdrColor + formattedFkdr + " \u00a7r\u00a77|\u00a7r [ " + tagsValue + " ]";
-            //     } else {
-            //         return getTabDisplayName(playerName) + " \u00a7r" + formattedStars + "\u00a7r\u00a77 |\u00a7r FKDR: " + fkdrColor + formattedFkdr + " \u00a7r\u00a77|\u00a7r WS: " + formattedWinstreak + "\u00a7r [ " + tagsValue + " ]";
-            //     }
-            // } else {
-            //     if (formattedWinstreak.isEmpty()) {
-            //         return getTabDisplayName(playerName) + " \u00a7r" + formattedStars + "\u00a7r\u00a77 |\u00a7r FKDR: " + fkdrColor + formattedFkdr + "\u00a7r";
-            //     } else {
-            //         return getTabDisplayName(playerName) + " \u00a7r" + formattedStars + "\u00a7r\u00a77 |\u00a7r FKDR: " + fkdrColor + formattedFkdr + " \u00a7r\u00a77|\u00a7r WS: " + formattedWinstreak + "\u00a7r";
-            //     }
-            // }
-
-
         }
         catch (Exception e) {
             return EnumChatFormatting.RED + playerName + " is possibly nicked.";
         }
-
     }
 
     private String fetchHypixelBedwarsStats(String uuid) throws IOException {
@@ -688,9 +616,9 @@ public class Statsify {
         in.close();
 
         return response.toString();
-        }
+    }
 
-        private String parseHypixelStats(String jsonResponse, String playerName, String uuid) {
+    private String parseHypixelStats(String jsonResponse, String playerName, String uuid) {
         try {
             JsonObject root = new JsonParser().parse(jsonResponse).getAsJsonObject();
             
@@ -712,9 +640,12 @@ public class Statsify {
             JsonObject bedwars = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
             
             // 星レベル計算
-            int experience = bedwars.has("Experience") ? bedwars.get("Experience").getAsInt() : 0;
-            int level = getBedwarsLevelFromExp(experience);
+            int level = 0;
+            if (player.has("achievements") && player.getAsJsonObject("achievements").has("bedwars_level")) {
+                level = player.getAsJsonObject("achievements").get("bedwars_level").getAsInt();
+            }
             String formattedStars = formatStars(String.valueOf(level));
+
             
             // FKDR計算
             int finalKills = bedwars.has("final_kills_bedwars") ? bedwars.get("final_kills_bedwars").getAsInt() : 0;
@@ -777,26 +708,6 @@ public class Statsify {
             e.printStackTrace();
             return playerName + " §cError parsing stats.";
         }
-        }
-
-        // Bedwarsレベル計算（Hypixel公式の計算式）
-        private int getBedwarsLevelFromExp(int exp) {
-        int level = 0;
-        int[] expPerPrestige = {500, 1000, 2000, 3500}; // 0-3星
-        int expForNextPrestige = 5000; // 4星以降
-
-        for (int i = 0; i < 4; i++) {
-            int requiredExp = expPerPrestige[i];
-            if (exp < requiredExp) {
-                return level;
-            }
-            exp -= requiredExp;
-            level++;
-        }
-
-        // 4星以降
-        level += exp / expForNextPrestige;
-        return level;
     }
 
     public String getUUIDFromName(String playerName) {
@@ -900,46 +811,6 @@ public class Statsify {
                     if(skincheck) totaltags = totaltags + EnumChatFormatting.DARK_AQUA + "SK \u00a7r";
                 }
             }   catch (Exception e) { e.printStackTrace();}
-
-        // Default skin check end
-/*
-Prename check
-
-        String apiUrl = "https://laby.net/api/v3/user/" + uuid + "/names";
-
-        try {
-            // Make the GET request
-            HttpURLConnection connection = (HttpURLConnection) new URL(apiUrl).openConnection();
-            connection.setRequestMethod("GET");
-
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-            connection.setRequestProperty("Accept", "application/json");
-
-            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            String inputLine;
-            StringBuilder response = new StringBuilder();
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-            in.close();
-
-            String jsonResponse = response.toString();
-
-            if (jsonResponse.contains("\"name\"")) {
-
-                int nameCount = countOccurrences(jsonResponse, "\"name\":");
-                if (nameCount == 1) {
-                    totaltags = totaltags + EnumChatFormatting.AQUA + "PN \u00a7r";
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-Prename check end
-*/
-        // New login
 
         String playerData = nadeshikoAPI(uuid);
         Pattern timestampPattern = Pattern.compile("\"first_login\":(\\d+),");
@@ -1214,72 +1085,6 @@ Prename check end
         if (endIndex == -1) return "N/A"; // Not found
         return text.substring(startIndex, endIndex).trim();
     }
-  /*
-    private String fetchPlayerStats(String playerName) throws IOException {
-        String url = "https://plancke.io/hypixel/player/stats/" + playerName;
-
-        java.net.URL urlObject = new java.net.URL(url);
-        java.net.HttpURLConnection connection = (java.net.HttpURLConnection) urlObject.openConnection();
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0");
-
-        java.io.InputStream inputStream = connection.getInputStream();
-        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(inputStream));
-        StringBuilder responseText = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            responseText.append(line);
-        }
-        reader.close();
-
-        String response = responseText.toString();
-
-
-        Pattern namePattern = Pattern.compile("(?<=content=\"Plancke\" /><meta property=\"og:locale\" content=\"en_US\" /><meta property=\"og:description\" content=\").+?(?=\")");
-        Matcher nameMatcher = namePattern.matcher(response);
-        String displayedName = nameMatcher.find() ? nameMatcher.group() : "Unknown";
-
-        Pattern kdPattern = Pattern.compile("<td style=\"border-right: 1px solid #f3f3f3\">(-|\\d+(\\.\\d+)?)</td>");
-        Matcher kdMatcher = kdPattern.matcher(response);
-        List<String> kdList = new ArrayList<String>();
-        while (kdMatcher.find()) {
-            kdList.add(kdMatcher.group(1));
-        }
-
-        String finalKd = (kdList.size() > 0) ? kdList.get(kdList.size() - 2) : "N/A";
-        if (!finalKd.equals("N/A")) {
-            try {
-                double fkdrValue = Double.parseDouble(finalKd);
-                if (minFkdr != DEFAULT_MIN_FKDR && fkdrValue < minFkdr) {
-                    return "";
-                }
-
-
-
-                String fkdrColor = "\u00a7r"; // Default
-                if (fkdrValue >= 10 && fkdrValue < 20) {
-                    fkdrColor = "\u00a76"; // Gold
-                } else if (fkdrValue >= 20) {
-                    fkdrColor = "\u00a74"; // Red
-                }
-                String playerrank = ""; // empty if no rank
-                String trimmedName = displayedName.trim();
-
-
-                String[] parts = trimmedName.split("\\s+", 2);
-                if (parts.length > 0 && parts[0].startsWith("[") && parts[0].endsWith("]")) {
-                    playerrank = parts[0];
-                }
-                // above there is insane method to parse rank !!
-
-                return playerrank + " " + getTabDisplayName(playerName) + " \u00a7r| FKDR: " + fkdrColor + finalKd;
-            } catch (NumberFormatException ignored) {
-            }
-        }
-
-        return "";
-    }
-    */
 
     public class BwModeCommand extends CommandBase {
 
@@ -1509,16 +1314,21 @@ Prename check end
             // 表示名取得
             String displayedName = player.has("displayname") ? player.get("displayname").getAsString() : playerName;
             
+            // ランク情報取得 (この行を追加)
+            String formattedRank = getFormattedRank(player);
+            
             // Bedwars統計取得
             if (!player.has("stats") || !player.getAsJsonObject("stats").has("Bedwars")) {
-                return displayedName + " \u00a7chas no Bedwars stats.";
+                return formattedRank + displayedName + " \u00a7chas no Bedwars stats.";
             }
             
             JsonObject bedwars = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
             
             // 星レベル計算
-            int experience = bedwars.has("Experience") ? bedwars.get("Experience").getAsInt() : 0;
-            int level = getBedwarsLevelFromExp(experience);
+            int level = 0;
+            if (player.has("achievements") && player.getAsJsonObject("achievements").has("bedwars_level")) {
+                level = player.getAsJsonObject("achievements").get("bedwars_level").getAsInt();
+            }
             String formattedStars = formatStars(String.valueOf(level));
             
             // FKDR計算
@@ -1541,12 +1351,99 @@ Prename check end
             DecimalFormat df = new DecimalFormat("#.##");
             String formattedFkdr = df.format(fkdr);
             
-            // シンプルな出力形式（元の仕様）
-            return displayedName + " \u00a7r" + formattedStars + " \u00a7rFKDR: " + fkdrColor + formattedFkdr;
+            // ランク付きの出力形式
+            return formattedRank + displayedName + " \u00a7r" + formattedStars + " \u00a7rFKDR: " + fkdrColor + formattedFkdr;
             
         } catch (Exception e) {
             e.printStackTrace();
             return playerName + " \u00a7cError fetching stats.";
+        }
+    }
+
+    private String getFormattedRank(JsonObject player) {
+        // Staff rank check (統合されたSTAFF)
+        if (player.has("rank") && !player.get("rank").isJsonNull()) {
+            String rank = player.get("rank").getAsString();
+            
+            if (rank.equals("ADMIN") || rank.equals("STAFF")) {
+                return "\u00a7c[\u00a76\u1361\u00a7c] ";
+            }
+            if (rank.equals("YOUTUBER")) {
+                return "\u00a7c[\u00a7fYOUTUBE\u00a7c] ";
+            }
+        }
+        
+        // Monthly package check (PIG+++)
+        if (player.has("monthlyPackageRank") && !player.get("monthlyPackageRank").isJsonNull()) {
+            String monthlyRank = player.get("monthlyPackageRank").getAsString();
+            if (monthlyRank.equals("SUPERSTAR")) {
+                return "\u00a7d[PIG\u00a7b+++\u00a7d] ";
+            }
+        }
+        
+        // Regular ranks with MVP++ color customization
+        String newPackageRank = player.has("newPackageRank") ? player.get("newPackageRank").getAsString() : null;
+        String packageRank = player.has("packageRank") ? player.get("packageRank").getAsString() : null;
+        
+        // Get rankPlusColor for MVP+ (default: RED)
+        String plusColor = "\u00a7c"; // Default red
+        if (player.has("rankPlusColor") && !player.get("rankPlusColor").isJsonNull()) {
+            plusColor = getColorCode(player.get("rankPlusColor").getAsString());
+        }
+        
+        // Get monthlyRankColor for MVP++ (default: GOLD)
+        String monthlyColor = "\u00a76"; // Default gold
+        if (player.has("monthlyRankColor") && !player.get("monthlyRankColor").isJsonNull()) {
+            monthlyColor = getColorCode(player.get("monthlyRankColor").getAsString());
+        }
+        
+        // Check newPackageRank first (MVP++)
+        if (newPackageRank != null) {
+            if (newPackageRank.equals("MVP_PLUS")) {
+                return monthlyColor + "[MVP" + plusColor + "++" + monthlyColor + "] ";
+            }
+        }
+        
+        // Check packageRank (MVP+ and below)
+        if (packageRank != null) {
+            if (packageRank.equals("MVP_PLUS")) {
+                return "\u00a7b[MVP" + plusColor + "+" + "\u00a7b] ";
+            }
+            if (packageRank.equals("MVP")) {
+                return "\u00a7b[MVP] ";
+            }
+            if (packageRank.equals("VIP_PLUS")) {
+                return "\u00a7a[VIP\u00a76+\u00a7a] ";
+            }
+            if (packageRank.equals("VIP")) {
+                return "\u00a7a[VIP] ";
+            }
+        }
+        
+        // Default (no rank)
+        return "\u00a77";
+    }
+    
+    private String getColorCode(String colorName) {
+        // Convert Hypixel color names to Minecraft color codes
+        switch (colorName.toUpperCase()) {
+            case "BLACK": return "\u00a70";
+            case "DARK_BLUE": return "\u00a71";
+            case "DARK_GREEN": return "\u00a72";
+            case "DARK_AQUA": return "\u00a73";
+            case "DARK_RED": return "\u00a74";
+            case "DARK_PURPLE": return "\u00a75";
+            case "GOLD": return "\u00a76";
+            case "GRAY": return "\u00a77";
+            case "DARK_GRAY": return "\u00a78";
+            case "BLUE": return "\u00a79";
+            case "GREEN": return "\u00a7a";
+            case "AQUA": return "\u00a7b";
+            case "RED": return "\u00a7c";
+            case "LIGHT_PURPLE": return "\u00a7d";
+            case "YELLOW": return "\u00a7e";
+            case "WHITE": return "\u00a7f";
+            default: return "\u00a7c"; // Default to RED
         }
     }
 
