@@ -1361,67 +1361,73 @@ public class Statsify {
     }
 
     private String getFormattedRank(JsonObject player) {
-        // Staff rank check (統合されたSTAFF)
+
         if (player.has("rank") && !player.get("rank").isJsonNull()) {
             String rank = player.get("rank").getAsString();
-            
-            if (rank.equals("ADMIN") || rank.equals("STAFF")) {
-                return "\u00a7c[\u00a76\u1361\u00a7c] ";
+
+            if (rank.equals("STAFF")) {
+                return "§c[§6ዞ§c] ";
             }
+
+            // YOUTUBER (Technoblade含む)
             if (rank.equals("YOUTUBER")) {
-                return "\u00a7c[\u00a7fYOUTUBE\u00a7c] ";
+                if (player.has("prefix") && !player.get("prefix").isJsonNull()) {
+                    String prefix = player.get("prefix").getAsString();
+                    if ("§d[PIG§b+++§d]".equals(prefix)) {
+                        return "§d[PIG§b+++§d] ";
+                    }
+                }
+                return "§c[§fYOUTUBE§c] ";
             }
         }
-        
-        // Monthly package check (PIG+++)
+
+        // ==============================
+        // 3. MVP++（monthlyPackageRank）
+        // ==============================
         if (player.has("monthlyPackageRank") && !player.get("monthlyPackageRank").isJsonNull()) {
-            String monthlyRank = player.get("monthlyPackageRank").getAsString();
-            if (monthlyRank.equals("SUPERSTAR")) {
-                return "\u00a7d[PIG\u00a7b+++\u00a7d] ";
-            }
-        }
-        
-        // Regular ranks with MVP++ color customization
-        String newPackageRank = player.has("newPackageRank") ? player.get("newPackageRank").getAsString() : null;
-        String packageRank = player.has("packageRank") ? player.get("packageRank").getAsString() : null;
-        
-        // Get rankPlusColor for MVP+ (default: RED)
-        String plusColor = "\u00a7c"; // Default red
-        if (player.has("rankPlusColor") && !player.get("rankPlusColor").isJsonNull()) {
-            plusColor = getColorCode(player.get("rankPlusColor").getAsString());
-        }
-        
-        // Get monthlyRankColor for MVP++ (default: GOLD)
-        String monthlyColor = "\u00a76"; // Default gold
-        if (player.has("monthlyRankColor") && !player.get("monthlyRankColor").isJsonNull()) {
-            monthlyColor = getColorCode(player.get("monthlyRankColor").getAsString());
-        }
-        
-        // Check newPackageRank first (MVP++)
-        if (newPackageRank != null) {
-            if (newPackageRank.equals("MVP_PLUS")) {
+            if ("SUPERSTAR".equals(player.get("monthlyPackageRank").getAsString())) {
+
+                String plusColor = "§c";     // default RED
+                String monthlyColor = "§6";  // default GOLD
+
+                if (player.has("rankPlusColor") && !player.get("rankPlusColor").isJsonNull()) {
+                    plusColor = getColorCode(player.get("rankPlusColor").getAsString());
+                }
+                if (player.has("monthlyRankColor") && !player.get("monthlyRankColor").isJsonNull()) {
+                    monthlyColor = getColorCode(player.get("monthlyRankColor").getAsString());
+                }
+
                 return monthlyColor + "[MVP" + plusColor + "++" + monthlyColor + "] ";
             }
         }
-        
-        // Check packageRank (MVP+ and below)
-        if (packageRank != null) {
-            if (packageRank.equals("MVP_PLUS")) {
-                return "\u00a7b[MVP" + plusColor + "+" + "\u00a7b] ";
+
+        // ==============================
+        // 4. MVP+ 以下（newPackageRank）
+        // ==============================
+        if (player.has("newPackageRank") && !player.get("newPackageRank").isJsonNull()) {
+            String newRank = player.get("newPackageRank").getAsString();
+
+            String plusColor = "§c";
+            if (player.has("rankPlusColor") && !player.get("rankPlusColor").isJsonNull()) {
+                plusColor = getColorCode(player.get("rankPlusColor").getAsString());
             }
-            if (packageRank.equals("MVP")) {
-                return "\u00a7b[MVP] ";
-            }
-            if (packageRank.equals("VIP_PLUS")) {
-                return "\u00a7a[VIP\u00a76+\u00a7a] ";
-            }
-            if (packageRank.equals("VIP")) {
-                return "\u00a7a[VIP] ";
+
+            switch (newRank) {
+                case "MVP_PLUS":
+                    return "§b[MVP" + plusColor + "+§b] ";
+                case "MVP":
+                    return "§b[MVP] ";
+                case "VIP_PLUS":
+                    return "§a[VIP§6+§a] ";
+                case "VIP":
+                    return "§a[VIP] ";
             }
         }
-        
-        // Default (no rank)
-        return "\u00a77";
+
+        // ==============================
+        // 5. NO RANK
+        // ==============================
+        return "§7";
     }
     
     private String getColorCode(String colorName) {
