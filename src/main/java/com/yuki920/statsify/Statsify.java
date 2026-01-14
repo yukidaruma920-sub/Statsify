@@ -3,21 +3,15 @@ package com.yuki920.statsify;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiPlayerTabOverlay;
 import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.scoreboard.ScorePlayerTeam;
-import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.IChatComponent;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
-import net.minecraft.scoreboard.ScorePlayerTeam;
-import net.minecraft.util.IChatComponent;
 import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -25,15 +19,11 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import scala.reflect.internal.Trees;
-import net.minecraft.scoreboard.ScorePlayerTeam;
+
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.io.*;
@@ -41,7 +31,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
+import java.util.stream.Collectors;
 
 @Mod(modid = Statsify.MODID, name = Statsify.NAME, version = Statsify.VERSION)
 public class Statsify {
@@ -58,12 +48,12 @@ public class Statsify {
     private Boolean reqUUID = false;
     private Boolean autowho = true;
     private String tabFormat = "bracket_star_name_dot_fkdr";
-    private static final Map<String, List<String>> playerSuffixes = new HashMap<String, List<String>>();
+    private static final Map<String, List<String>> playerSuffixes = new HashMap<>();
     private final Minecraft mc = Minecraft.getMinecraft();
     private int minFkdr = DEFAULT_MIN_FKDR;
     private String urchinkey = "";
     private String mode = DEFAULT_MODE;
-    private List<String> onlinePlayers = new ArrayList<String>();
+    private List<String> onlinePlayers = new ArrayList<>();
     private String hypixelApiKey = "";
 
     @Mod.EventHandler
@@ -87,43 +77,37 @@ public class Statsify {
 
     @SubscribeEvent
     public void onChat(final ClientChatReceivedEvent event) {
-        catchAndIgnoreNullPointerException(new Runnable() {
-            @Override
-            public void run() {
-                String message = event.message.getUnformattedText();
-                if(autowho) {
-                    if (message.contains("Protect your bed and destroy the enemy beds.") && !(message.contains(":")) && !(message.contains("SHOUT"))) {
-                        mc.thePlayer.sendChatMessage("/who");
-                    }
+        catchAndIgnoreNullPointerException(() -> {
+            String message = event.message.getUnformattedText();
+            if (autowho) {
+                if (message.contains("Protect your bed and destroy the enemy beds.") && !(message.contains(":")) && !(message.contains("SHOUT"))) {
+                    mc.thePlayer.sendChatMessage("/who");
                 }
-                if (message.startsWith("ONLINE:")) {
-                    String playersString = message.substring("ONLINE:".length()).trim();
-                    String[] players = playersString.split(",\\s*");
-                    onlinePlayers = new ArrayList<String>(Arrays.asList(players));
-                    if (Objects.equals(mode, "bws")) {
-                        checkStatsRatelimitless();
-                    } else {
-                        Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cPlancke is discontinued, use BWS."));
-                    }
-                    if (urchin) {
-                        checkUrchinTags();
-                    }
+            }
+            if (message.startsWith("ONLINE:")) {
+                String playersString = message.substring("ONLINE:".length()).trim();
+                String[] players = playersString.split(",\\s*");
+                onlinePlayers = new ArrayList<>(Arrays.asList(players));
+                if (Objects.equals(mode, "bws")) {
+                    checkStatsRatelimitless();
+                } else {
+                    Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cPlancke is discontinued, use BWS."));
                 }
+                if (urchin) {
+                    checkUrchinTags();
+                }
+            }
 
-                if (message.startsWith(" ") && message.contains("Opponent:")) {
-                    final String username = parseUsername(message);
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                String stats = checkDuels(username);
-                                Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] " + stats));
-                            } catch (IOException e) {
-                                Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7c" + username + " is possibly nicked.\u00a7r"));
-                            }
-                        }
-                    }).start();
-                }
+            if (message.startsWith(" ") && message.contains("Opponent:")) {
+                final String username = parseUsername(message);
+                new Thread(() -> {
+                    try {
+                        String stats = checkDuels(username);
+                        Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] " + stats));
+                    } catch (IOException e) {
+                        Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7c" + username + " is possibly nicked.\u00a7r"));
+                    }
+                }).start();
             }
         });
     }
@@ -153,17 +137,14 @@ public class Statsify {
 
                 if (!name.endsWith("\u30fb" + suffixv.get(1))) {
                     String teamColor = team.length() >= 2 ? team.substring(0, 2) : "";
-                    String newDisplayName = null;
+                    String newDisplayName;
                     if (tabFormat.equals("bracket_star_name_dot_fkdr")) {
                         newDisplayName = team + "\u00a77[" + suffixv.get(0) + "\u00a77] " + teamColor + name + "\u30fb" + suffixv.get(1);
-                    }
-                    else if (tabFormat.equals("star_dot_name_dot_fkdr")) {
+                    } else if (tabFormat.equals("star_dot_name_dot_fkdr")) {
                         newDisplayName = team + suffixv.get(0) + "\u30fb" + teamColor + name + "\u30fb" + suffixv.get(1);
-                    }
-                    else if (tabFormat.equals("name_dot_fkdr")) {
+                    } else if (tabFormat.equals("name_dot_fkdr")) {
                         newDisplayName = team + teamColor + name + "\u30fb" + suffixv.get(1);
-                    }
-                    else {
+                    } else {
                         newDisplayName = team + "\u00a77[" + suffixv.get(0) + "\u00a77] " + teamColor + name + "\u30fb" + suffixv.get(1);
 
                     }
@@ -193,16 +174,16 @@ public class Statsify {
         }
 
 
-            int length = playerTeam.getColorPrefix().length();
+        int length = playerTeam.getColorPrefix().length();
 
-            if (length == 10) {
-                return playerTeam.getColorPrefix() + playerName + playerTeam.getColorSuffix();
-            }
+        if (length == 10) {
+            return playerTeam.getColorPrefix() + playerName + playerTeam.getColorSuffix();
+        }
 
-            if(length == 8) {
-                return playerTeam.getColorPrefix() + playerName;
+        if (length == 8) {
+            return playerTeam.getColorPrefix() + playerName;
 
-            }
+        }
 
         return playerName;
 
@@ -217,19 +198,18 @@ public class Statsify {
             return new String[]{"", playerName, ""};
 
         }
-            int length = playerTeam.getColorPrefix().length();
+        int length = playerTeam.getColorPrefix().length();
 
         if (length == 10) {
-            String val[] = new String[3];
+            String[] val = new String[3];
             val[0] = playerTeam.getColorPrefix();
             val[1] = playerName;
             val[2] = playerTeam.getColorSuffix();
             return val;
         }
 
-        if(length == 8)
-        {
-            String val[] = new String[3];
+        if (length == 8) {
+            String[] val = new String[3];
             val[0] = playerTeam.getColorPrefix();
             val[1] = playerName;
             val[2] = "";
@@ -245,15 +225,16 @@ public class Statsify {
         HttpURLConnection connection = (HttpURLConnection) urlObject.openConnection();
         connection.setRequestProperty("User-Agent", "Mozilla/5.0");
 
-        InputStream inputStream = connection.getInputStream();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         StringBuilder responseText = new StringBuilder();
-        String line;
 
-        while ((line = reader.readLine()) != null) {
-            responseText.append(line);
+        // Java 8 try-with-resources
+        try (InputStream inputStream = connection.getInputStream();
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                responseText.append(line);
+            }
         }
-        reader.close();
 
         String response = responseText.toString();
         int responseCode = connection.getResponseCode();
@@ -289,129 +270,78 @@ public class Statsify {
     }
 
     private static String formatRank(String rank) {
-        String formattedRank = rank.replace("[VIP", "\u00a7a[VIP").replace("[MVP+", "\u00a7b[MVP+").replace("[MVP++", "\u00a76[MVP++");
-        return formattedRank;
+        return rank.replace("[VIP", "\u00a7a[VIP").replace("[MVP+", "\u00a7b[MVP+").replace("[MVP++", "\u00a76[MVP++");
     }
 
     private void checkUrchinTags() {
-        catchAndIgnoreNullPointerException(new Runnable() {
-            @Override
-            public void run() {
-                ExecutorService executor = Executors.newFixedThreadPool(5);
+        catchAndIgnoreNullPointerException(() -> {
+            ExecutorService executor = Executors.newFixedThreadPool(5);
 
-                for (final String playerName : onlinePlayers) {
-                    executor.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                String uuid = fetchUUID(playerName);
-                                final String tags = fetchUrchinTags(playerName).replace("sniper", "\u00a74\u00a7lSniper").replace("blatant_cheater", "\u00a74\u00a7lBlatant Cheater").replace("closet_cheater", "\u00a7e\u00a7lCloset Cheater").replace("confirmed_cheater", "\u00a74\u00a7lConfirmed Cheater");
+            for (final String playerName : onlinePlayers) {
+                executor.submit(() -> {
+                    try {
+                        fetchUUID(playerName);
+                        final String tags = fetchUrchinTags(playerName).replace("sniper", "\u00a74\u00a7lSniper").replace("blatant_cheater", "\u00a74\u00a7lBlatant Cheater").replace("closet_cheater", "\u00a7e\u00a7lCloset Cheater").replace("confirmed_cheater", "\u00a74\u00a7lConfirmed Cheater");
 
-                                if (!tags.isEmpty()) {
-                                    mc.addScheduledTask(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            mc.thePlayer.addChatMessage(
-                                                new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7c\u26a0 \u00a7r" + getTabDisplayName(playerName) + " \u00a7ris \u00a7ctagged\u00a7r for: " + tags)
-                                            );
-                                        }
-                                    });
-                                }
-
-                            } catch (final IOException e) {
-                                mc.addScheduledTask(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        mc.thePlayer.addChatMessage(
-                                            new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] Failed to fetch tags for: " + playerName + " | " + e.getMessage())
-                                        );
-                                    }
-                                });
-                            }
+                        if (!tags.isEmpty()) {
+                            mc.addScheduledTask(() -> mc.thePlayer.addChatMessage(
+                                    new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7c\u26a0 \u00a7r" + getTabDisplayName(playerName) + " \u00a7ris \u00a7ctagged\u00a7r for: " + tags)
+                            ));
                         }
-                    });
-                }
-                executor.shutdown();
+
+                    } catch (final IOException e) {
+                        mc.addScheduledTask(() -> mc.thePlayer.addChatMessage(
+                                new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] Failed to fetch tags for: " + playerName + " | " + e.getMessage())
+                        ));
+                    }
+                });
             }
+            executor.shutdown();
         });
     }
 
     private void checkStatsRatelimitless() {
-        catchAndIgnoreNullPointerException(new Runnable() {
-            @Override
-            public void run() {
-                final int MAX_THREADS = 20;
-                int poolSize = Math.min(onlinePlayers.size(), MAX_THREADS);
-                final ExecutorService executor = Executors.newFixedThreadPool(poolSize);
+        catchAndIgnoreNullPointerException(() -> {
+            final int MAX_THREADS = 20;
+            int poolSize = Math.min(onlinePlayers.size(), MAX_THREADS);
+            final ExecutorService executor = Executors.newFixedThreadPool(poolSize);
 
-                for (final String playerName : onlinePlayers) {
-                    executor.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                final String stats = fetchBedwarsStats(playerName);
-                                if (!stats.isEmpty()) {
-                                    mc.addScheduledTask(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            mc.thePlayer.addChatMessage(
-                                                new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] " + stats)
-                                            );
-                                        }
-                                    });
-                                }
-                            } catch (IOException e) {
-                                mc.addScheduledTask(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        mc.thePlayer.addChatMessage(
-                                            new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] Failed to fetch stats for: " + playerName + " | [UpstreamCSR] ")
-                                        );
-                                    }
-                                });
-                            }
+            for (final String playerName : onlinePlayers) {
+                executor.submit(() -> {
+                    try {
+                        final String stats = fetchBedwarsStats(playerName);
+                        if (!stats.isEmpty()) {
+                            mc.addScheduledTask(() -> mc.thePlayer.addChatMessage(
+                                    new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] " + stats)
+                            ));
                         }
-                    });
-                }
-
-                executor.shutdown();
-
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            if (executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                                mc.addScheduledTask(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        mc.thePlayer.addChatMessage(
-                                            new ChatComponentText("\u00a7r[\u00a7bF\u00a7r]\u00a7a Checks completed.")
-                                        );
-                                    }
-                                });
-                            } else {
-                                mc.addScheduledTask(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        mc.thePlayer.addChatMessage(
-                                            new ChatComponentText("\u00a7r[\u00a7bF\u00a7r]\u00a7c Timeout waiting for completion.")
-                                        );
-                                    }
-                                });
-                            }
-                        } catch (final InterruptedException e) {
-                            mc.addScheduledTask(new Runnable() {
-                                @Override
-                                public void run() {
-                                    mc.thePlayer.addChatMessage(
-                                        new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cError while waiting: " + e.getMessage())
-                                    );
-                                }
-                            });
-                        }
+                    } catch (IOException e) {
+                        mc.addScheduledTask(() -> mc.thePlayer.addChatMessage(
+                                new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] Failed to fetch stats for: " + playerName + " | [UpstreamCSR] ")
+                        ));
                     }
-                }).start();
+                });
             }
+
+            executor.shutdown();
+
+            new Thread(() -> {
+                try {
+                    if (executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                        mc.addScheduledTask(() -> mc.thePlayer.addChatMessage(
+                                new ChatComponentText("\u00a7r[\u00a7bF\u00a7r]\u00a7a Checks completed.")
+                        ));
+                    } else {
+                        mc.addScheduledTask(() -> mc.thePlayer.addChatMessage(
+                                new ChatComponentText("\u00a7r[\u00a7bF\u00a7r]\u00a7c Timeout waiting for completion.")
+                        ));
+                    }
+                } catch (final InterruptedException e) {
+                    mc.addScheduledTask(() -> mc.thePlayer.addChatMessage(
+                            new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cError while waiting: " + e.getMessage())
+                    ));
+                }
+            }).start();
         });
     }
 
@@ -424,11 +354,11 @@ public class Statsify {
 
             int responseCode = connection.getResponseCode();
             if (responseCode == 200) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = in.readLine()) != null) response.append(line);
-                in.close();
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                    String line;
+                    while ((line = in.readLine()) != null) response.append(line);
+                }
                 String uuid = extractUUID(response.toString());
                 return uuid != null ? uuid : "NICKED";
             }
@@ -441,11 +371,11 @@ public class Statsify {
                 connection = (HttpURLConnection) new URL(urlString).openConnection();
                 connection.setRequestMethod("GET");
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = in.readLine()) != null) response.append(line);
-                in.close();
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                    String line;
+                    while ((line = in.readLine()) != null) response.append(line);
+                }
 
                 if (response.toString().contains("\"id\": null")) return "NICKED";
                 String[] parts = response.toString().split("\"id\":\"");
@@ -456,7 +386,8 @@ public class Statsify {
                 }
             }
 
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         return "NICKED";
     }
@@ -490,22 +421,20 @@ public class Statsify {
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
 
-                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 StringBuilder response = new StringBuilder();
-                String inputLine;
-
-                while ((inputLine = in.readLine()) != null) {
-                    response.append(inputLine);
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                    String inputLine;
+                    while ((inputLine = in.readLine()) != null) {
+                        response.append(inputLine);
+                    }
                 }
-                in.close();
                 String responseString = response.toString();
                 Pattern pattern = Pattern.compile("playerData = JSON.parse\\(decodeURIComponent\\(\"(.*?)\"\\)\\)");
-                Matcher matcher = pattern.matcher(responseString.toString());
+                Matcher matcher = pattern.matcher(responseString);
 
                 if (matcher.find()) {
                     String playerDataEncoded = matcher.group(1);
-                    String playerData = URLDecoder.decode(playerDataEncoded, "UTF-8");
-                    return playerData;
+                    return URLDecoder.decode(playerDataEncoded, "UTF-8");
                 }
 
             }
@@ -530,15 +459,14 @@ public class Statsify {
             throw new IOException("URCHIN: " + responseCode);
         }
 
-        InputStream inputStream = statsConnection.getInputStream();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         StringBuilder responseText = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            responseText.append(line);
+        try (InputStream inputStream = statsConnection.getInputStream();
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                responseText.append(line);
+            }
         }
-        reader.close();
 
         String response = responseText.toString();
         if (!response.isEmpty()) {
@@ -565,16 +493,15 @@ public class Statsify {
     public String fetchBedwarsStats(String playerName) throws IOException {
         try {
             String uuid = getUUIDFromName(playerName);
-            
+
             if (uuid == null || uuid.equals("NICKED")) {
                 return getTabDisplayName(playerName) + " §cis possibly nicked.";
             }
-            
+
             // Hypixel APIを使用
             String jsonResponse = fetchHypixelBedwarsStats(uuid);
             return parseHypixelStats(jsonResponse, playerName, uuid);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return EnumChatFormatting.RED + playerName + " is possibly nicked.";
         }
     }
@@ -607,13 +534,13 @@ public class Statsify {
         }
 
         // レスポンス読み取り
-        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         StringBuilder response = new StringBuilder();
-        String line;
-        while ((line = in.readLine()) != null) {
-            response.append(line);
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+            String line;
+            while ((line = in.readLine()) != null) {
+                response.append(line);
+            }
         }
-        in.close();
 
         return response.toString();
     }
@@ -621,24 +548,24 @@ public class Statsify {
     private String parseHypixelStats(String jsonResponse, String playerName, String uuid) {
         try {
             JsonObject root = new JsonParser().parse(jsonResponse).getAsJsonObject();
-            
+
             // プレイヤーが存在しない場合
             if (!root.get("success").getAsBoolean() || root.get("player").isJsonNull()) {
                 return playerName + " §cis possibly nicked.";
             }
-            
+
             JsonObject player = root.getAsJsonObject("player");
-            
+
             // 表示名取得
             String displayName = player.has("displayname") ? player.get("displayname").getAsString() : playerName;
-            
+
             // Bedwars統計取得
             if (!player.has("stats") || !player.getAsJsonObject("stats").has("Bedwars")) {
                 return displayName + " §chas no Bedwars stats.";
             }
-            
+
             JsonObject bedwars = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
-            
+
             // 星レベル計算
             int level = 0;
             if (player.has("achievements") && player.getAsJsonObject("achievements").has("bedwars_level")) {
@@ -646,17 +573,17 @@ public class Statsify {
             }
             String formattedStars = formatStars(String.valueOf(level));
 
-            
+
             // FKDR計算
             int finalKills = bedwars.has("final_kills_bedwars") ? bedwars.get("final_kills_bedwars").getAsInt() : 0;
             int finalDeaths = bedwars.has("final_deaths_bedwars") ? bedwars.get("final_deaths_bedwars").getAsInt() : 1;
             double fkdr = (double) finalKills / finalDeaths;
-            
+
             // 最小FKDR フィルター
             if (fkdr < minFkdr) {
                 return "";
             }
-            
+
             // FKDR色付け
             String fkdrColor = "§7";
             if (fkdr >= 0.5 && fkdr < 1) fkdrColor = "§f";
@@ -668,23 +595,23 @@ public class Statsify {
             if (fkdr >= 8 && fkdr < 10) fkdrColor = "§4";
             if (fkdr >= 10 && fkdr < 15) fkdrColor = "§d";
             if (fkdr > 15) fkdrColor = "§5";
-            
+
             DecimalFormat df = new DecimalFormat("#.##");
             String formattedFkdr = df.format(fkdr);
-            
+
             // ウィンストリーク
             int winstreak = bedwars.has("winstreak") ? bedwars.get("winstreak").getAsInt() : 0;
             String formattedWinstreak = "";
             if (winstreak > 0) {
                 formattedWinstreak = formatWinstreak(String.valueOf(winstreak));
             }
-            
+
             // タブリストに送信
             String tabfkdr = fkdrColor + formattedFkdr;
             if (tabstats) {
                 sendToTablist(playerName, tabfkdr, formattedStars);
             }
-            
+
             // タグ処理
             if (tags) {
                 String tagsValue = buildTags(playerName, uuid, level, fkdr, winstreak, finalKills, finalDeaths);
@@ -703,7 +630,7 @@ public class Statsify {
                     return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + " §r§7|§r WS: " + formattedWinstreak + "§r";
                 }
             }
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             return playerName + " §cError parsing stats.";
@@ -718,6 +645,7 @@ public class Statsify {
         }
         return null; // Player not found (probably not in tab list)
     }
+
     private static String extractLevel(String html) {
         // From Quick Stats section
         Pattern pattern = Pattern.compile(">Level</span><span[^>]*?font-mono[^>]*?>(.*?)</span>");
@@ -736,7 +664,7 @@ public class Statsify {
 
     /*      Tags are not completed    */
 
-    private String buildTags(String name,String uuid, int stars, double fkdr, int ws, int finals, int fdeaths){
+    private String buildTags(String name, String uuid, int stars, double fkdr, int ws, int finals, int fdeaths) {
         /*
         N = Suspicious name (kikin, mchk, msmc, 4+ number in name..)
         W = Winstreak while being low star (1+ WS when 1-6 star)
@@ -749,10 +677,9 @@ public class Statsify {
          */
 
 
-
         // Suspicious name
         String totaltags = "";
-        String[] suswords = {"msmc", "kikin", "g0ld", "Fxrina_", "MAL_", "fer_","ly_","tzi_","Verse_","uwunova","Anas_","MyloAlt_","rayl_","mchk_","HellAlts_","disruptive","solaralts_","G0LDALTS_","unwilling","predicative"};
+        String[] suswords = {"msmc", "kikin", "g0ld", "Fxrina_", "MAL_", "fer_", "ly_", "tzi_", "Verse_", "uwunova", "Anas_", "MyloAlt_", "rayl_", "mchk_", "HellAlts_", "disruptive", "solaralts_", "G0LDALTS_", "unwilling", "predicative"};
         boolean suswordcheck = false;
         for (String keyword : suswords) {
             if (name.toLowerCase().contains(keyword.toLowerCase())) {
@@ -761,56 +688,60 @@ public class Statsify {
             }
         }
 
-        if(suswordcheck || Pattern.compile("\\d.*\\d.*\\d.*\\d").matcher(name).find()) totaltags = totaltags + EnumChatFormatting.YELLOW + "N \u00a7r";
+        if (suswordcheck || Pattern.compile("\\d.*\\d.*\\d.*\\d").matcher(name).find())
+            totaltags = totaltags + EnumChatFormatting.YELLOW + "N \u00a7r";
         // Suspicious name end
 
         // Winstreak while low star
-        if(stars <= 6 && ws >= 1) totaltags = totaltags + EnumChatFormatting.GREEN + "W \u00a7r";
+        if (stars <= 6 && ws >= 1) totaltags = totaltags + EnumChatFormatting.GREEN + "W \u00a7r";
         // Winstreak while low star end
 
         // High fkdr when low star
-        if(stars <= 6 && fkdr >= 4) totaltags = totaltags + EnumChatFormatting.DARK_RED + "F \u00a7r";
+        if (stars <= 6 && fkdr >= 4) totaltags = totaltags + EnumChatFormatting.DARK_RED + "F \u00a7r";
         // High fkdr when low star end
 
         // Default skin check
 
-        /* All i could collect lol*/ String[] defaultSkinIDS = {"a3bd16079f764cd541e072e888fe43885e711f98658323db0f9a6045da91ee7a ","b66bc80f002b10371e2fa23de6f230dd5e2f3affc2e15786f65bc9be4c6eb71a","e5cdc3243b2153ab28a159861be643a4fc1e3c17d291cdd3e57a7f370ad676f3", "f5dddb41dcafef616e959c2817808e0be741c89ffbfed39134a13e75b811863d" ,"4c05ab9e07b3505dc3ec11370c3bdce5570ad2fb2b562e9b9dd9cf271f81aa44", "31f477eb1a7beee631c2ca64d06f8f68fa93a3386d04452ab27f43acdf1b60cb", "6ac6ca262d67bcfb3dbc924ba8215a18195497c780058a5749de674217721892", "1abc803022d8300ab7578b189294cce39622d9a404cdc00d3feacfdf45be6981","daf3d88ccb38f11f74814e92053d92f7728ddb1a7955652a60e30cb27ae6659f", "fece7017b1bb13926d1158864b283b8b930271f80a90482f174cca6a17e88236"};
-            try {
-                String urlString = "https://sessionserver.mojang.com/session/minecraft/profile/" + uuid;
+        /* All i could collect lol*/
+        String[] defaultSkinIDS = {"a3bd16079f764cd541e072e888fe43885e711f98658323db0f9a6045da91ee7a ", "b66bc80f002b10371e2fa23de6f230dd5e2f3affc2e15786f65bc9be4c6eb71a", "e5cdc3243b2153ab28a159861be643a4fc1e3c17d291cdd3e57a7f370ad676f3", "f5dddb41dcafef616e959c2817808e0be741c89ffbfed39134a13e75b811863d", "4c05ab9e07b3505dc3ec11370c3bdce5570ad2fb2b562e9b9dd9cf271f81aa44", "31f477eb1a7beee631c2ca64d06f8f68fa93a3386d04452ab27f43acdf1b60cb", "6ac6ca262d67bcfb3dbc924ba8215a18195497c780058a5749de674217721892", "1abc803022d8300ab7578b189294cce39622d9a404cdc00d3feacfdf45be6981", "daf3d88ccb38f11f74814e92053d92f7728ddb1a7955652a60e30cb27ae6659f", "fece7017b1bb13926d1158864b283b8b930271f80a90482f174cca6a17e88236"};
+        try {
+            String urlString = "https://sessionserver.mojang.com/session/minecraft/profile/" + uuid;
 
-                URL url = new URL(urlString);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
 
-                int responseCode = connection.getResponseCode();
+            int responseCode = connection.getResponseCode();
 
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    // Handle success response from official API
-                    BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                    StringBuilder response = new StringBuilder();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                // Handle success response from official API
+                StringBuilder response = new StringBuilder();
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                     String inputLine;
 
                     while ((inputLine = in.readLine()) != null) {
                         response.append(inputLine);
                     }
-                    in.close();
-
-                    String responseString = response.toString();
-                    String[] parts = responseString.split("\"value\" : \"");
-                    String value = parts[1].split("\"")[0];
-                    byte[] decodedBytes = Base64.getDecoder().decode(value);
-                    String valueJson = new String(decodedBytes);
-                    boolean skincheck = false;
-                    for (String id : defaultSkinIDS) {
-                        if (valueJson.toLowerCase().contains(id.toLowerCase())) {
-                            skincheck = true;
-                            break;
-                        }
-                    }
-
-                    if(skincheck) totaltags = totaltags + EnumChatFormatting.DARK_AQUA + "SK \u00a7r";
                 }
-            }   catch (Exception e) { e.printStackTrace();}
+
+                String responseString = response.toString();
+                String[] parts = responseString.split("\"value\" : \"");
+                String value = parts[1].split("\"")[0];
+                byte[] decodedBytes = Base64.getDecoder().decode(value);
+                String valueJson = new String(decodedBytes);
+                boolean skincheck = false;
+                for (String id : defaultSkinIDS) {
+                    if (valueJson.toLowerCase().contains(id.toLowerCase())) {
+                        skincheck = true;
+                        break;
+                    }
+                }
+
+                if (skincheck) totaltags = totaltags + EnumChatFormatting.DARK_AQUA + "SK \u00a7r";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         String playerData = nadeshikoAPI(uuid);
         Pattern timestampPattern = Pattern.compile("\"first_login\":(\\d+),");
@@ -845,12 +776,12 @@ public class Statsify {
         }
 
         // 0 finals 0 final deaths
-        if(finals == 0 &&  fdeaths == 0) totaltags = totaltags + EnumChatFormatting.RED + "0F \u00a7r";
+        if (finals == 0 && fdeaths == 0) totaltags = totaltags + EnumChatFormatting.RED + "0F \u00a7r";
 
-       return totaltags;
+        return totaltags;
     }
-    private String formatWinstreak(String text)
-    {
+
+    private String formatWinstreak(String text) {
         String color = "\u00a7r";
         int Winstreak = Integer.parseInt(text);
         if (Winstreak >= 5 && Winstreak < 10) {
@@ -864,8 +795,8 @@ public class Statsify {
         }
         return color + text;
     }
-    private String formatStars(String text)
-    {
+
+    private String formatStars(String text) {
         String color = "\u00a77";
 
         int Stars = Integer.parseInt(text);
@@ -912,7 +843,7 @@ public class Statsify {
         }
         if (Stars >= 1000 && Stars < 1100) {
             String[] digit = text.split("");
-            return "\u00a76"+digit[0]+"\u00a7e"+digit[1]+"\u00a7a"+digit[2]+"\u00a7b"+digit[3]+"\u00a7d"+"\u272b";
+            return "\u00a76" + digit[0] + "\u00a7e" + digit[1] + "\u00a7a" + digit[2] + "\u00a7b" + digit[3] + "\u00a7d" + "\u272b";
         }
         if (Stars >= 1100 && Stars < 1200) {
             String[] digit = text.split("");
@@ -924,19 +855,19 @@ public class Statsify {
         }
         if (Stars >= 1300 && Stars < 1400) {
             String[] digit = text.split("");
-            return "\u00a7b" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a73"  + "\u272a";
+            return "\u00a7b" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a73" + "\u272a";
         }
         if (Stars >= 1400 && Stars < 1500) {
             String[] digit = text.split("");
-            return "\u00a7a" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a72"  + "\u272a";
+            return "\u00a7a" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a72" + "\u272a";
         }
         if (Stars >= 1500 && Stars < 1600) {
             String[] digit = text.split("");
-            return "\u00a73" + digit[0] + digit[1] + digit[2] + digit[3]+ "\u00a79"  + "\u272a";
+            return "\u00a73" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a79" + "\u272a";
         }
         if (Stars >= 1600 && Stars < 1700) {
             String[] digit = text.split("");
-            return "\u00a7c" + digit[0] + digit[1] + digit[2]  + digit[3] + "\u00a74" + "\u272a";
+            return "\u00a7c" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a74" + "\u272a";
         }
         if (Stars >= 1700 && Stars < 1800) {
             String[] digit = text.split("");
@@ -944,11 +875,11 @@ public class Statsify {
         }
         if (Stars >= 1800 && Stars < 1900) {
             String[] digit = text.split("");
-            return "\u00a79" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a71"  + "\u272a";
+            return "\u00a79" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a71" + "\u272a";
         }
         if (Stars >= 1900 && Stars < 2000) {
             String[] digit = text.split("");
-            return "\u00a75" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a78"  + "\u272a";
+            return "\u00a75" + digit[0] + digit[1] + digit[2] + digit[3] + "\u00a78" + "\u272a";
         }
         if (Stars >= 2000 && Stars < 2100) {
             String[] digit = text.split("");
@@ -994,7 +925,7 @@ public class Statsify {
             String[] digit = text.split("");
             return "\u00a7e" + digit[0] + "\u00a76" + digit[1] + digit[2] + "\u00a7c" + digit[3] + "\u269d";
         }
-                if (Stars >= 3100 && Stars < 3200) {
+        if (Stars >= 3100 && Stars < 3200) {
             String[] digit = text.split("");
             return "\u00a79" + digit[0] + "\u00a73" + digit[1] + digit[2] + "\u00a76" + digit[3] + "\u2725";
         }
@@ -1106,7 +1037,7 @@ public class Statsify {
             }
 
             mode = args[0].toLowerCase();
-            saveConfig(minFkdr, mode, tags,tabstats,urchin,urchinkey,reqUUID,autowho, tabFormat, hypixelApiKey);
+            saveConfig(minFkdr, mode, tags, tabstats, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
             sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aMode set to: " + mode));
         }
 
@@ -1115,24 +1046,23 @@ public class Statsify {
             return 0;
         }
     }
+
     private void loadConfig() {
         File configFile = new File(CONFIG_PATH);
         if (!configFile.exists()) {
-            saveConfig(DEFAULT_MIN_FKDR, DEFAULT_MODE, false,true,false,"",true,true, "bracket_star_name_dot_fkdr", "");
+            saveConfig(DEFAULT_MIN_FKDR, DEFAULT_MODE, false, true, false, "", true, true, "bracket_star_name_dot_fkdr", "");
             return;
         }
 
-        Reader reader = null;
-        try {
-            reader = new FileReader(configFile);
+        try (Reader reader = new FileReader(configFile)) {
             JsonObject json = new Gson().fromJson(reader, JsonObject.class);
             minFkdr = json.has("minFkdr") ? json.get("minFkdr").getAsInt() : DEFAULT_MIN_FKDR;
             mode = json.has("mode") ? json.get("mode").getAsString() : DEFAULT_MODE;
-            tags = json.has("tags") ? json.get("tags").getAsBoolean() : false;
-            tabstats = json.has("tablist") ? json.get("tablist").getAsBoolean() : true;
-            urchin = json.has("urchin") ? json.get("urchin").getAsBoolean() : false;
-            reqUUID = json.has("reqUUID") ? json.get("reqUUID").getAsBoolean() : true;
-            autowho = json.has("autowho") ? json.get("autowho").getAsBoolean() : true;
+            tags = json.has("tags") && json.get("tags").getAsBoolean();
+            tabstats = !json.has("tablist") || json.get("tablist").getAsBoolean();
+            urchin = json.has("urchin") && json.get("urchin").getAsBoolean();
+            reqUUID = !json.has("reqUUID") || json.get("reqUUID").getAsBoolean();
+            autowho = !json.has("autowho") || json.get("autowho").getAsBoolean();
             urchinkey = json.has("urchinkey") ? json.get("urchinkey").getAsString() : "";
             tabFormat = json.has("tabformat") ? json.get("tabformat").getAsString() : "bracket_star_name_dot_fkdr";
             hypixelApiKey = json.has("hypixelApiKey") ? json.get("hypixelApiKey").getAsString() : "";
@@ -1148,14 +1078,6 @@ public class Statsify {
             autowho = true;
             tabFormat = "bracket_star_name_dot_fkdr";
             hypixelApiKey = "";
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
         }
     }
 
@@ -1163,9 +1085,7 @@ public class Statsify {
         File configFile = new File(CONFIG_PATH);
         configFile.getParentFile().mkdirs();
 
-        Writer writer = null;
-        try {
-            writer = new FileWriter(configFile);
+        try (Writer writer = new FileWriter(configFile)) {
             JsonObject json = new JsonObject();
             json.addProperty("minFkdr", minFkdrValue);
             json.addProperty("mode", modeValue);
@@ -1180,14 +1100,6 @@ public class Statsify {
             new Gson().toJson(json, writer);
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
         }
 
     }
@@ -1214,7 +1126,7 @@ public class Statsify {
             try {
                 int value = Integer.parseInt(args[0]);
                 minFkdr = value;
-                saveConfig(value, mode,tags,tabstats,urchin,urchinkey,reqUUID,autowho,tabFormat, hypixelApiKey);
+                saveConfig(value, mode, tags, tabstats, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aMinimum FKDR set to: " + value));
             } catch (NumberFormatException e) {
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cInvalid number! Use an integer value."));
@@ -1226,6 +1138,7 @@ public class Statsify {
             return 0;
         }
     }
+
     public class SetUrchinKeyCommand extends CommandBase {
 
         @Override
@@ -1246,11 +1159,11 @@ public class Statsify {
             }
 
             try {
-                String value = args[0].toString();
+                String value = args[0];
                 urchinkey = value;
-                saveConfig(minFkdr, mode,tags,tabstats,urchin,urchinkey,reqUUID,autowho,tabFormat, hypixelApiKey);
+                saveConfig(minFkdr, mode, tags, tabstats, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aUrchin API Key set to: " + value));
-            } catch(Exception e) {
+            } catch (Exception e) {
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cfish."));
             }
         }
@@ -1260,6 +1173,7 @@ public class Statsify {
             return 0;
         }
     }
+
     public class SetHypixelKeyCommand extends CommandBase {
 
         @Override
@@ -1277,7 +1191,7 @@ public class Statsify {
             if (args.length != 1) {
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cInvalid usage! Use /hypixelkey <apikey>\u00a7r"));
                 return;
-                
+
             }
 
             hypixelApiKey = args[0];
@@ -1295,47 +1209,47 @@ public class Statsify {
         try {
             // APIを使ってUUIDを取得（タブリスト外のプレイヤーにも対応）
             String uuid = fetchUUID(playerName);
-            
+
             if (uuid == null || uuid.equals("NICKED")) {
                 return playerName + " \u00a7c is possibly nicked.";
             }
-            
+
             // Hypixel APIを使用
             String jsonResponse = fetchHypixelBedwarsStats(uuid);
             JsonObject root = new JsonParser().parse(jsonResponse).getAsJsonObject();
-            
+
             // プレイヤーが存在しない場合
             if (!root.get("success").getAsBoolean() || root.get("player").isJsonNull()) {
                 return playerName + " \u00a7cis possibly nicked.";
             }
-            
+
             JsonObject player = root.getAsJsonObject("player");
-            
+
             // 表示名取得
             String displayedName = player.has("displayname") ? player.get("displayname").getAsString() : playerName;
-            
+
             // ランク情報取得 (この行を追加)
             String formattedRank = getFormattedRank(player);
-            
+
             // Bedwars統計取得
             if (!player.has("stats") || !player.getAsJsonObject("stats").has("Bedwars")) {
                 return formattedRank + displayedName + " \u00a7chas no Bedwars stats.";
             }
-            
+
             JsonObject bedwars = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
-            
+
             // 星レベル計算
             int level = 0;
             if (player.has("achievements") && player.getAsJsonObject("achievements").has("bedwars_level")) {
                 level = player.getAsJsonObject("achievements").get("bedwars_level").getAsInt();
             }
             String formattedStars = formatStars(String.valueOf(level));
-            
+
             // FKDR計算
             int finalKills = bedwars.has("final_kills_bedwars") ? bedwars.get("final_kills_bedwars").getAsInt() : 0;
             int finalDeaths = bedwars.has("final_deaths_bedwars") ? bedwars.get("final_deaths_bedwars").getAsInt() : 1;
             double fkdr = (double) finalKills / finalDeaths;
-            
+
             // FKDR色付け
             String fkdrColor = "\u00a77";
             if (fkdr >= 0.5 && fkdr < 1) fkdrColor = "\u00a7f";
@@ -1347,13 +1261,13 @@ public class Statsify {
             if (fkdr >= 8 && fkdr < 10) fkdrColor = "\u00a74";
             if (fkdr >= 10 && fkdr < 15) fkdrColor = "\u00a7d";
             if (fkdr > 15) fkdrColor = "\u00a75";
-            
+
             DecimalFormat df = new DecimalFormat("#.##");
             String formattedFkdr = df.format(fkdr);
-            
+
             // ランク付きの出力形式
             return formattedRank + displayedName + " \u00a7r" + formattedStars + " \u00a7rFKDR: " + fkdrColor + formattedFkdr;
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             return playerName + " \u00a7cError fetching stats.";
@@ -1429,93 +1343,97 @@ public class Statsify {
         // ==============================
         return "§7";
     }
-    
+
     private String getColorCode(String colorName) {
         // Convert Hypixel color names to Minecraft color codes
         switch (colorName.toUpperCase()) {
-            case "BLACK": return "\u00a70";
-            case "DARK_BLUE": return "\u00a71";
-            case "DARK_GREEN": return "\u00a72";
-            case "DARK_AQUA": return "\u00a73";
-            case "DARK_RED": return "\u00a74";
-            case "DARK_PURPLE": return "\u00a75";
-            case "GOLD": return "\u00a76";
-            case "GRAY": return "\u00a77";
-            case "DARK_GRAY": return "\u00a78";
-            case "BLUE": return "\u00a79";
-            case "GREEN": return "\u00a7a";
-            case "AQUA": return "\u00a7b";
-            case "RED": return "\u00a7c";
-            case "LIGHT_PURPLE": return "\u00a7d";
-            case "YELLOW": return "\u00a7e";
-            case "WHITE": return "\u00a7f";
-            default: return "\u00a7c"; // Default to RED
+            case "BLACK":
+                return "\u00a70";
+            case "DARK_BLUE":
+                return "\u00a71";
+            case "DARK_GREEN":
+                return "\u00a72";
+            case "DARK_AQUA":
+                return "\u00a73";
+            case "DARK_RED":
+                return "\u00a74";
+            case "DARK_PURPLE":
+                return "\u00a75";
+            case "GOLD":
+                return "\u00a76";
+            case "GRAY":
+                return "\u00a77";
+            case "DARK_GRAY":
+                return "\u00a78";
+            case "BLUE":
+                return "\u00a79";
+            case "GREEN":
+                return "\u00a7a";
+            case "AQUA":
+                return "\u00a7b";
+            case "RED":
+                return "\u00a7c";
+            case "LIGHT_PURPLE":
+                return "\u00a7d";
+            case "YELLOW":
+                return "\u00a7e";
+            case "WHITE":
+                return "\u00a7f";
+            default:
+                return "\u00a7c"; // Default to RED
         }
     }
 
-// Command to manually check individual stats
+    // Command to manually check individual stats
     public class BedwarsCommand extends CommandBase {
 
         @Override
         public String getCommandName() {
             return "bw";
         }
-    
+
         @Override
         public String getCommandUsage(ICommandSender sender) {
             return "/bw <username>";
         }
-    
+
         @Override
         public void processCommand(ICommandSender sender, String[] args) {
             if (args.length != 1) {
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r]\u00a7cInvalid usage!\u00a7r Use /bw \u00a75<username>\u00a7r"));
                 return;
             }
-    
+
             final String username = args[0];
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        // 専用メソッドを使用（Tabリスト上書きなし）
-                        final String stats = fetchPlayerStatsForCommand(username);
-                        Minecraft.getMinecraft().addScheduledTask(new Runnable() {
-                            @Override
-                            public void run() {
-                                Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] " + stats));
-                            }
-                        });
-                    } catch (IOException e) {
-                        Minecraft.getMinecraft().addScheduledTask(new Runnable() {
-                            @Override
-                            public void run() {
-                                Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cFailed to fetch stats for: \u00a7r" + username));
-                            }
-                        });
-                    }
+            new Thread(() -> {
+                try {
+                    // 専用メソッドを使用（Tabリスト上書きなし）
+                    final String stats = fetchPlayerStatsForCommand(username);
+                    Minecraft.getMinecraft().addScheduledTask(() -> Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] " + stats)));
+                } catch (IOException e) {
+                    Minecraft.getMinecraft().addScheduledTask(() -> Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cFailed to fetch stats for: \u00a7r" + username)));
                 }
             }).start();
         }
-        
+
         @Override
         public List<String> addTabCompletionOptions(ICommandSender sender, String[] args, BlockPos pos) {
             if (args.length == 1) {
                 Collection<NetworkPlayerInfo> playerInfoMap = Minecraft.getMinecraft().getNetHandler().getPlayerInfoMap();
-                List<String> playerNames = new ArrayList<String>();
-                for (NetworkPlayerInfo info : playerInfoMap) {
-                    playerNames.add(info.getGameProfile().getName());
-                }
-                return getListOfStringsMatchingLastWord(args, playerNames.toArray(new String[playerNames.size()]));
+                List<String> playerNames = playerInfoMap.stream()
+                        .map(info -> info.getGameProfile().getName())
+                        .collect(Collectors.toList());
+                return getListOfStringsMatchingLastWord(args, playerNames.toArray(new String[0]));
             }
             return null;
         }
-        
+
         @Override
         public int getRequiredPermissionLevel() {
             return 0;
         }
     }
+
     /* ========================================================= */
     public class StatsifyCommand extends CommandBase {
 
@@ -1548,18 +1466,21 @@ public class Statsify {
             sender.addChatMessage(new ChatComponentText("\u00a7r\u00a73/hypixelkey <apikey>:\u00a7b Set your Hypixel API Key (https://developer.hypixel.net/dashboard/).\u00a7r"));
             sender.addChatMessage(new ChatComponentText(""));
         }
+
         @Override
         public int getRequiredPermissionLevel() {
             return 0;
         }
     }
+
     /* ========================================================= */
     private void catchAndIgnoreNullPointerException(Runnable runnable) {
         try {
             runnable.run();
         } catch (NullPointerException e) {
-           }
+        }
     }
+
     /* debug func */
     private static int countOccurrences(String str, String subStr) {
         int count = 0;
@@ -1572,6 +1493,7 @@ public class Statsify {
 
         return count;
     }
+
     public class ToggleTagsCommand extends CommandBase {
 
         @Override
@@ -1592,7 +1514,7 @@ public class Statsify {
             }
 
             String arg = args[0].toLowerCase();
-            if(arg.equalsIgnoreCase("info")) {
+            if (arg.equalsIgnoreCase("info")) {
                 sender.addChatMessage(new ChatComponentText("\u00a7r\u00a7b\u00a7lfon\u00a79\u00a7lta\u00a73\u00a7line\u00a7r"));
                 sender.addChatMessage(new ChatComponentText("\u00a7r\u00a7bmade by\u00a7e melissalmao\u00a7r"));
                 sender.addChatMessage(new ChatComponentText(""));
@@ -1608,13 +1530,13 @@ public class Statsify {
 
 
             }
-            if(arg.equalsIgnoreCase("on")) {
-                saveConfig(minFkdr,mode,true,tabstats,urchin,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+            if (arg.equalsIgnoreCase("on")) {
+                saveConfig(minFkdr, mode, true, tabstats, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                 tags = true;
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aTags toggled: " + arg));
             }
-            if(arg.equalsIgnoreCase("off")) {
-                saveConfig(minFkdr,mode,false,tabstats,urchin,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+            if (arg.equalsIgnoreCase("off")) {
+                saveConfig(minFkdr, mode, false, tabstats, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                 tags = false;
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aTags toggled: " + arg));
             }
@@ -1646,17 +1568,18 @@ public class Statsify {
             }
 
             String arg = args[0].toLowerCase();
-            if(arg.equalsIgnoreCase("on")) {
-                saveConfig(minFkdr,mode,tags,true,urchin,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+            if (arg.equalsIgnoreCase("on")) {
+                saveConfig(minFkdr, mode, tags, true, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                 tabstats = true;
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aTabstats toggled: " + arg));
             }
-            if(arg.equalsIgnoreCase("off")) {
-                saveConfig(minFkdr,mode,tags,false,urchin,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+            if (arg.equalsIgnoreCase("off")) {
+                saveConfig(minFkdr, mode, tags, false, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                 tabstats = false;
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aTabstats toggled: " + arg));
             }
         }
+
         @Override
         public int getRequiredPermissionLevel() {
             return 0;
@@ -1683,22 +1606,24 @@ public class Statsify {
             }
 
             String arg = args[0].toLowerCase();
-            if(arg.equalsIgnoreCase("on")) {
-                saveConfig(minFkdr,mode,tags,tabstats,urchin,urchinkey,reqUUID,true,tabFormat,hypixelApiKey);
+            if (arg.equalsIgnoreCase("on")) {
+                saveConfig(minFkdr, mode, tags, tabstats, urchin, urchinkey, reqUUID, true, tabFormat, hypixelApiKey);
                 autowho = true;
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aautoWHO: " + arg));
             }
-            if(arg.equalsIgnoreCase("off")) {
-                saveConfig(minFkdr,mode,tags,tabstats,urchin,urchinkey,reqUUID,false,tabFormat,hypixelApiKey);
+            if (arg.equalsIgnoreCase("off")) {
+                saveConfig(minFkdr, mode, tags, tabstats, urchin, urchinkey, reqUUID, false, tabFormat, hypixelApiKey);
                 autowho = false;
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aautoWHO: " + arg));
             }
         }
+
         @Override
         public int getRequiredPermissionLevel() {
             return 0;
         }
     }
+
     public class UrchinTagsToggleCommand extends CommandBase {
 
         @Override
@@ -1719,22 +1644,24 @@ public class Statsify {
             }
 
             String arg = args[0].toLowerCase();
-            if(arg.equalsIgnoreCase("on")) {
-                saveConfig(minFkdr,mode,tags,tabstats,true,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+            if (arg.equalsIgnoreCase("on")) {
+                saveConfig(minFkdr, mode, tags, tabstats, true, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                 urchin = true;
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aUrchinAPI toggled: " + arg));
             }
-            if(arg.equalsIgnoreCase("off")) {
-                saveConfig(minFkdr,mode,tags,tabstats,false,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+            if (arg.equalsIgnoreCase("off")) {
+                saveConfig(minFkdr, mode, tags, tabstats, false, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                 urchin = false;
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7aUrchinAPI toggled: " + arg));
             }
         }
+
         @Override
         public int getRequiredPermissionLevel() {
             return 0;
         }
     }
+
     public class ClearCacheCommand extends CommandBase {
 
         @Override
@@ -1754,6 +1681,7 @@ public class Statsify {
             playerSuffixes.clear();
 
         }
+
         @Override
         public int getRequiredPermissionLevel() {
             return 0;
@@ -1789,26 +1717,25 @@ public class Statsify {
             }
 
             try {
-                String value = args[0].toString();
+                String value = args[0];
 
-                if("1".equals(value)){
+                if ("1".equals(value)) {
                     tabFormat = "bracket_star_name_dot_fkdr";
-                    saveConfig(minFkdr, mode,tags,tabstats,urchin,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+                    saveConfig(minFkdr, mode, tags, tabstats, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                     sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a72Tablist format set to 1."));
-                } else if ("2".equals(value)){
+                } else if ("2".equals(value)) {
                     tabFormat = "star_dot_name_dot_fkdr";
-                    saveConfig(minFkdr, mode,tags,tabstats,urchin,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+                    saveConfig(minFkdr, mode, tags, tabstats, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                     sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a72Tablist format set to 2."));
-                } else if ("3".equals(value)){
+                } else if ("3".equals(value)) {
                     tabFormat = "name_dot_fkdr";
-                    saveConfig(minFkdr, mode,tags,tabstats,urchin,urchinkey,reqUUID,autowho,tabFormat,hypixelApiKey);
+                    saveConfig(minFkdr, mode, tags, tabstats, urchin, urchinkey, reqUUID, autowho, tabFormat, hypixelApiKey);
                     sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a72Tablist format set to 3."));
-                }
-                else{
+                } else {
                     sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cInvalid value. 1-3."));
                 }
 
-            } catch(Exception e) {
+            } catch (Exception e) {
                 sender.addChatMessage(new ChatComponentText("\u00a7r[\u00a7bF\u00a7r] \u00a7cfish."));
             }
         }
