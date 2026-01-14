@@ -8,6 +8,7 @@ public class BedwarsUtil {
     // あの巨大なif文をここに持ってきます
     public static String formatStars(String text) {
         int Stars = Integer.parseInt(text);
+        String color;
         if (Stars < 100) {
             color = "\u00a77";
             return color + text + "\u272b";
