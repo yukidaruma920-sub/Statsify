@@ -1,7 +1,7 @@
 [
   {
     "modid": "statsify",
-    "name": Bedwars Stats Mod",
+    "name": "Bedwars Stats Mod",
     "description": "bedwars stat mod.",
     "version": "${version}",
     "mcversion": "${mcversion}",
