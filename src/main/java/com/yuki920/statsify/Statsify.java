@@ -155,6 +155,7 @@ public class Statsify {
                 newDisplayName = team + "\u00a78[\u00a75NICK\u00a78] " + teamColor + name;
             }
             playerInfo.setDisplayName(new ChatComponentText(newDisplayName));
+        }
     }
 
     public static void sendToTablist(String playerName, String fkdr, String stars) {
