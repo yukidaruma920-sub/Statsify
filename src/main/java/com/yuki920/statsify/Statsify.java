@@ -5,6 +5,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.NetworkPlayerInfo;
+import net.minecraft.scoreboard.ScoreObjective;
+import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScorePlayerTeam;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumChatFormatting;
@@ -53,7 +55,7 @@ public class Statsify {
     private int minFkdr = DEFAULT_MIN_FKDR;
     private String urchinkey = "";
     private String mode = DEFAULT_MODE;
-    private List<String> onlinePlayers = new ArrayList<>();
+    private Set<String> onlinePlayers = new HashSet<>();
     private String hypixelApiKey = "";
 
     @Mod.EventHandler
@@ -79,15 +81,17 @@ public class Statsify {
     public void onChat(final ClientChatReceivedEvent event) {
         catchAndIgnoreNullPointerException(() -> {
             String message = event.message.getUnformattedText();
-            if (autowho) {
-                if (message.contains("Protect your bed and destroy the enemy beds.") && !(message.contains(":")) && !(message.contains("SHOUT"))) {
+            if (message.contains("Protect your bed and destroy the enemy beds.") && !(message.contains(":")) && !(message.contains("SHOUT"))) {
+                playerSuffixes.clear();
+                onlinePlayers.clear();
+                if (autowho) {
                     mc.thePlayer.sendChatMessage("/who");
                 }
             }
             if (message.startsWith("ONLINE:")) {
                 String playersString = message.substring("ONLINE:".length()).trim();
                 String[] players = playersString.split(",\\s*");
-                onlinePlayers = new ArrayList<>(Arrays.asList(players));
+                onlinePlayers = new HashSet<>(Arrays.asList(players));
                 if (Objects.equals(mode, "bws")) {
                     checkStatsRatelimitless();
                 } else {
@@ -118,7 +122,7 @@ public class Statsify {
         // Future reference, I have no idea what the FUCK did i do here. It works, but idk how. So I wont be improving this.
         // does not work on viaforge 1.20 / 1.19
         if (event.type != RenderGameOverlayEvent.ElementType.PLAYER_LIST) return;
-        if (!tabstats) return;
+        if (!tabstats || !isBedwars()) return;
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.thePlayer == null || mc.thePlayer.sendQueue == null) return;
 
@@ -127,16 +131,16 @@ public class Statsify {
 
         for (NetworkPlayerInfo playerInfo : playerInfoList) {
             if (playerInfo == null || playerInfo.getGameProfile() == null) continue;
-        
+
             String playerName = playerInfo.getGameProfile().getName();
             List<String> suffixv = playerSuffixes.get(playerName);
-        
+
             String[] tabData = getTabDisplayName2(playerName);
             String team = tabData[0], name = tabData[1], suffix = tabData[2];
             String teamColor = team.length() >= 2 ? team.substring(0, 2) : "";
-        
+
             String newDisplayName;
-        
+
             if (suffixv != null && suffixv.size() >= 2) {
                 if (!name.endsWith(" \u00a78| " + suffixv.get(1))) {
                     if (tabFormat.equals("bracket_star_name_dot_fkdr")) {
@@ -148,13 +152,12 @@ public class Statsify {
                     } else {
                         newDisplayName = team + suffixv.get(0) + " " + teamColor + name + " \u00a78| " + suffixv.get(1);
                     }
-                } else {
-                    continue;
+                    playerInfo.setDisplayName(new ChatComponentText(newDisplayName));
                 }
-            } else {
+            } else if (onlinePlayers.contains(playerName)) {
                 newDisplayName = team + "\u00a78[\u00a75NICK\u00a78] " + teamColor + name;
+                playerInfo.setDisplayName(new ChatComponentText(newDisplayName));
             }
-            playerInfo.setDisplayName(new ChatComponentText(newDisplayName));
         }
     }
 
@@ -1475,6 +1478,16 @@ public class Statsify {
         public int getRequiredPermissionLevel() {
             return 0;
         }
+    }
+
+    private boolean isBedwars() {
+        if (mc.theWorld == null) return false;
+        Scoreboard scoreboard = mc.theWorld.getScoreboard();
+        if (scoreboard == null) return false;
+        ScoreObjective sidebarObjective = scoreboard.getObjectiveInDisplaySlot(1);
+        if (sidebarObjective == null) return false;
+        String title = EnumChatFormatting.getTextWithoutFormattingCodes(sidebarObjective.getDisplayName());
+        return title.toUpperCase().contains("BED WARS");
     }
 
     /* ========================================================= */
