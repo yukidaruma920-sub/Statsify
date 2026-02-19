@@ -144,18 +144,18 @@ public class Statsify {
             if (suffixv != null && suffixv.size() >= 2) {
                 if (!name.endsWith(" \u00a78| " + suffixv.get(1))) {
                     if (tabFormat.equals("bracket_star_name_dot_fkdr")) {
-                        newDisplayName = team + suffixv.get(0) + " " + teamColor + name + " \u00a78| " + suffixv.get(1);
+                        newDisplayName = team + suffixv.get(0) + "\u00a7r " + teamColor + name + " \u00a78| " + suffixv.get(1);
                     } else if (tabFormat.equals("star_dot_name_dot_fkdr")) {
-                        newDisplayName = team + suffixv.get(0) + " \u00a78| " + teamColor + name + " \u00a78| " + suffixv.get(1);
+                        newDisplayName = team + suffixv.get(0) + " \u00a78|\u00a7r " + teamColor + name + " \u00a78| " + suffixv.get(1);
                     } else if (tabFormat.equals("name_dot_fkdr")) {
-                        newDisplayName = team + teamColor + name + " \u00a78| " + suffixv.get(1);
+                        newDisplayName = team + teamColor + name + " \u00a78|\u00a7r " + suffixv.get(1);
                     } else {
-                        newDisplayName = team + suffixv.get(0) + " " + teamColor + name + " \u00a78| " + suffixv.get(1);
+                        newDisplayName = team + suffixv.get(0) + "\u00a7r " + teamColor + name + " \u00a78| " + suffixv.get(1);
                     }
                     playerInfo.setDisplayName(new ChatComponentText(newDisplayName));
                 }
             } else if (onlinePlayers.contains(playerName)) {
-                newDisplayName = team + "\u00a78[\u00a75NICK\u00a78] " + teamColor + name;
+                newDisplayName = team + "\u00a78[\u00a75NICK\u00a78]\u00a7r " + teamColor + name;
                 playerInfo.setDisplayName(new ChatComponentText(newDisplayName));
             }
         }
