@@ -580,11 +580,20 @@ public class Statsify {
             }
             String formattedStars = formatStars(String.valueOf(level));
 
-
             // FKDR計算
             int finalKills = bedwars.has("final_kills_bedwars") ? bedwars.get("final_kills_bedwars").getAsInt() : 0;
             int finalDeaths = bedwars.has("final_deaths_bedwars") ? bedwars.get("final_deaths_bedwars").getAsInt() : 1;
             double fkdr = (double) finalKills / finalDeaths;
+
+            // WLR計算
+            int bwWins = bedwars.has("wins_bedwars") ? bedwars.get("wins_bedwars").getAsInt() : 0;
+            int bwLosses = bedwars.has("losses_bedwars") ? bedwars.get("losses_bedwars").getAsInt() : 1;
+            double wlr = (double) bwWins / bwLosses;
+
+            // BBLR計算 (未使用)
+            // int bedsBroken = bedwars.has("beds_broken_bedwars") ? bedwars.get("beds_broken_bedwars").getAsInt() : 0;
+            // int bedsLost = bedwars.has("beds_lost_bedwars") ? bedwars.get("beds_lost_bedwars").getAsInt() : 1;
+            // double bblr = (double) bedsBroken / bedsLost;
 
             // 最小FKDR フィルター
             if (fkdr < minFkdr) {
@@ -595,16 +604,42 @@ public class Statsify {
             String fkdrColor = "§7";
             if (fkdr >= 0.5 && fkdr < 1) fkdrColor = "§f";
             if (fkdr >= 1 && fkdr < 2) fkdrColor = "§a";
-            if (fkdr >= 2 && fkdr < 3) fkdrColor = "§2";
-            if (fkdr >= 3 && fkdr < 4) fkdrColor = "§e";
-            if (fkdr >= 4 && fkdr < 6) fkdrColor = "§6";
-            if (fkdr >= 6 && fkdr < 8) fkdrColor = "§c";
-            if (fkdr >= 8 && fkdr < 10) fkdrColor = "§4";
-            if (fkdr >= 10 && fkdr < 15) fkdrColor = "§d";
-            if (fkdr > 15) fkdrColor = "§5";
+            if (fkdr >= 2 && fkdr < 4) fkdrColor = "§2";
+            if (fkdr >= 4 && fkdr < 6) fkdrColor = "§e";
+            if (fkdr >= 6 && fkdr < 9) fkdrColor = "§6";
+            if (fkdr >= 9 && fkdr < 12) fkdrColor = "§c";
+            if (fkdr >= 12 && fkdr < 15) fkdrColor = "§4";
+            if (fkdr >= 15 && fkdr < 20) fkdrColor = "§d";
+            if (fkdr > 20) fkdrColor = "§5";
+
+            // WLR色付け
+            String wlrColor = "§7";
+            if (wlr >= 0 && wlr < 0.2) wlrColor = "§f";
+            if (wlr >= 0.2 && wlr < 0.5) wlrColor = "§a";
+            if (wlr >= 0.5 && wlr < 1) wlrColor = "§2";
+            if (wlr >= 1 && wlr < 2.5) wlrColor = "§e";
+            if (wlr >= 2.5 && wlr < 5) wlrColor = "§6";
+            if (wlr >= 5 && wlr < 8) wlrColor = "§c";
+            if (wlr >= 8 && wlr < 12) wlrColor = "§4";
+            if (wlr >= 12 && wlr < 20) wlrColor = "§d";
+            if (wlr >= 20) wlrColor = "§5";
+
+            // BBLR色分け (未使用)
+            // String bblrColor = "§7";
+            // if (bblr >= 0 && bblr < 0.3) bblrColor = "§f";
+            // if (bblr >= 0.3 && bblr < 0.7) bblrColor = "§a";
+            // if (bblr >= 0.7 && bblr < 1.5) bblrColor = "§2";
+            // if (bblr >= 1.5 && bblr < 3) bblrColor = "§e";
+            // if (bblr >= 3 && bblr < 5) bblrColor = "§6";
+            // if (bblr >= 5 && bblr < 7) bblrColor = "§c";
+            // if (bblr >= 7 && bblr < 10) bblrColor = "§4";
+            // if (bblr >= 10 && bblr < 15) bblrColor = "§d";
+            // if (bblr >= 15) bblrColor = "§5";
 
             DecimalFormat df = new DecimalFormat("#.##");
             String formattedFkdr = df.format(fkdr);
+            String formattedWlr = df.format(wlr);
+            // String formattedBblr = df.format(bblr);
 
             // ウィンストリーク
             int winstreak = bedwars.has("winstreak") ? bedwars.get("winstreak").getAsInt() : 0;
@@ -615,26 +650,28 @@ public class Statsify {
 
             // タブリストに送信
             String tabfkdr = fkdrColor + formattedFkdr;
+            String tabwlr = wlrColor + formatterWlr;
+            // String tabbblr = bblrColor + formattedBblr;
             if (tabstats) {
-                sendToTablist(playerName, tabfkdr, formattedStars);
+                sendToTablist(playerName, tabfkdr + " §8| " + tabwlr, formattedStars);
             }
 
             // タグ処理
             if (tags) {
-                String tagsValue = buildTags(playerName, uuid, level, fkdr, winstreak, finalKills, finalDeaths);
+                String tagsValue = buildTags(playerName, uuid, level, fkdr, winstreak, finalKills, finalDeaths, wlr, bwWins, bwLosses);
                 if (tagsValue.endsWith(" ")) {
                     tagsValue = tagsValue.substring(0, tagsValue.length() - 1);
                 }
                 if (formattedWinstreak.isEmpty()) {
-                    return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + " §r§7|§r [ " + tagsValue + " ]";
+                    return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + "§r§7 |§r WLR: " + wlrColor + formattedWlr + " §r§7|§r [ " + tagsValue + " ]";
                 } else {
-                    return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + " §r§7|§r WS: " + formattedWinstreak + "§r [ " + tagsValue + " ]";
+                    return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + "§r§7 |§r WLR: " + wlrColor + formattedWlr + " §r§7|§r WS: " + formattedWinstreak + "§r [ " + tagsValue + " ]";
                 }
             } else {
                 if (formattedWinstreak.isEmpty()) {
-                    return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + "§r";
+                    return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + "§r§7 |§r WLR: " + wlrColor + formattedWlr + "§r";
                 } else {
-                    return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + " §r§7|§r WS: " + formattedWinstreak + "§r";
+                    return getTabDisplayName(playerName) + " §r" + formattedStars + "§r§7 |§r FKDR: " + fkdrColor + formattedFkdr + "§r§7 |§r WLR: " + wlrColor + formattedWlr + " §r§7|§r WS: " + formattedWinstreak + "§r";
                 }
             }
 
@@ -1257,23 +1294,40 @@ public class Statsify {
             int finalDeaths = bedwars.has("final_deaths_bedwars") ? bedwars.get("final_deaths_bedwars").getAsInt() : 1;
             double fkdr = (double) finalKills / finalDeaths;
 
+            // WLR計算
+            int bwWins = bedwars.has("wins_bedwars") ? bedwars.get("wins_bedwars").getAsInt() : 0;
+            int bwLosses = bedwars.has("losses_bedwars") ? bedwars.get("losses_bedwars").getAsInt() : 1;
+            double wlr = (double) bwWins / bwLosses;
+
             // FKDR色付け
             String fkdrColor = "\u00a77";
             if (fkdr >= 0.5 && fkdr < 1) fkdrColor = "\u00a7f";
             if (fkdr >= 1 && fkdr < 2) fkdrColor = "\u00a7a";
-            if (fkdr >= 2 && fkdr < 3) fkdrColor = "\u00a72";
-            if (fkdr >= 3 && fkdr < 4) fkdrColor = "\u00a7e";
-            if (fkdr >= 4 && fkdr < 6) fkdrColor = "\u00a76";
-            if (fkdr >= 6 && fkdr < 8) fkdrColor = "\u00a7c";
-            if (fkdr >= 8 && fkdr < 10) fkdrColor = "\u00a74";
-            if (fkdr >= 10 && fkdr < 15) fkdrColor = "\u00a7d";
-            if (fkdr > 15) fkdrColor = "\u00a75";
+            if (fkdr >= 2 && fkdr < 4) fkdrColor = "\u00a72";
+            if (fkdr >= 4 && fkdr < 6) fkdrColor = "\u00a7e";
+            if (fkdr >= 6 && fkdr < 8) fkdrColor = "\u00a76";
+            if (fkdr >= 8 && fkdr < 10) fkdrColor = "\u00a7c";
+            if (fkdr >= 10 && fkdr < 15) fkdrColor = "\u00a74";
+            if (fkdr >= 15 && fkdr < 20) fkdrColor = "\u00a7d";
+            if (fkdr > 20) fkdrColor = "\u00a75";
+
+            String wlrColor = "\u00a77";
+            if (wlr >= 0 && wlr < 0.2) wlrColor = "\u00a7f";
+            if (wlr >= 0.2 && wlr < 0.5) wlrColor = "\u00a7a";
+            if (wlr >= 0.5 && wlr < 1) wlrColor = "\u00a72";
+            if (wlr >= 1 && wlr < 2.5) wlrColor = "\u00a7e";
+            if (wlr >= 2.5 && wlr < 5) wlrColor = "\u00a76";
+            if (wlr >= 5 && wlr < 8) wlrColor = "\u00a7c";
+            if (wlr >= 8 && wlr < 12) wlrColor = "\u00a74";
+            if (wlr >= 12 && wlr < 20) wlrColor = "\u00a7d";
+            if (wlr >= 20) wlrColor = "\u00a75";
 
             DecimalFormat df = new DecimalFormat("#.##");
             String formattedFkdr = df.format(fkdr);
+            String formattedWlr = df.format(wlr);
 
             // ランク付きの出力形式
-            return formattedRank + displayedName + " \u00a7r" + formattedStars + " \u00a7rFKDR: " + fkdrColor + formattedFkdr;
+            return formattedRank + displayedName + " \u00a7r" + formattedStars + " \u00a7rFKDR: " + fkdrColor + formattedFkdr + " \u00a7rWLR: " + wlrColor + formattedWlr;
 
         } catch (Exception e) {
             e.printStackTrace();
