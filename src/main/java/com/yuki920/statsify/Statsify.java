@@ -650,7 +650,7 @@ public class Statsify {
 
             // タブリストに送信
             String tabfkdr = fkdrColor + formattedFkdr;
-            String tabwlr = wlrColor + formatterWlr;
+            String tabwlr = wlrColor + formattedWlr;
             // String tabbblr = bblrColor + formattedBblr;
             if (tabstats) {
                 sendToTablist(playerName, tabfkdr + " §8| " + tabwlr, formattedStars);
@@ -658,7 +658,7 @@ public class Statsify {
 
             // タグ処理
             if (tags) {
-                String tagsValue = buildTags(playerName, uuid, level, fkdr, winstreak, finalKills, finalDeaths, wlr, bwWins, bwLosses);
+                String tagsValue = buildTags(playerName, uuid, level, fkdr, winstreak, finalKills, finalDeaths);
                 if (tagsValue.endsWith(" ")) {
                     tagsValue = tagsValue.substring(0, tagsValue.length() - 1);
                 }
