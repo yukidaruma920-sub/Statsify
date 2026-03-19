@@ -2,6 +2,7 @@ package com.yuki920.statsify.api;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.yuki920.statsify.util.BedwarsLevelUtil;
 import com.yuki920.statsify.util.FormatUtil;
 import net.minecraft.util.EnumChatFormatting;
 
@@ -34,9 +35,11 @@ public class StatsParser {
 
             JsonObject bedwars = player.getAsJsonObject("stats").getAsJsonObject("Bedwars");
 
+            // 星レベル計算（Experienceベース）
             int level = 0;
-            if (player.has("achievements") && player.getAsJsonObject("achievements").has("bedwars_level")) {
-                level = player.getAsJsonObject("achievements").get("bedwars_level").getAsInt();
+            if (bedwars.has("Experience") && !bedwars.get("Experience").isJsonNull()) {
+                long exp = bedwars.get("Experience").getAsLong();
+                level = BedwarsLevelUtil.getLevelFromExp(exp);
             }
 
             int finalKills  = getInt(bedwars, "final_kills_bedwars", 0);
